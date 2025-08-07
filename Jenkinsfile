@@ -21,7 +21,7 @@ pipeline {
                 sh '''
                     mkdir -p /var/lib/jenkins/.m2
                     cp mvn-app/settings.xml /var/lib/jenkins/.m2/settings.xml
-                    chown jenkins:jenkins /var/lib/jenkins/.m2/settings.xml
+                    chown -R jenkins:jenkins /var/lib/jenkins/.m2
                 '''
             }
         }
@@ -29,27 +29,41 @@ pipeline {
         stage('SonarQube Scan') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner -Dproject.settings=sonar-project.properties"
+                    sh '''
+                        cd mvn-app
+                        ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
+                            -Dsonar.projectKey=ci-cd-app \
+                            -Dsonar.projectName=ci-cd-app \
+                            -Dsonar.sources=. \
+                            -Dsonar.java.binaries=target \
+                            -Dsonar.host.url=http://172.31.10.224:30900
+                    '''
                 }
             }
         }
 
         stage('Build Artifact') {
             steps {
-                sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
+                sh '''
+                    cd mvn-app
+                    ${MAVEN_HOME}/bin/mvn clean package -DskipTests
+                '''
             }
         }
 
         stage('Upload Artifact to Nexus') {
             steps {
-                sh "${MAVEN_HOME}/bin/mvn deploy"
+                sh '''
+                    cd mvn-app
+                    ${MAVEN_HOME}/bin/mvn deploy
+                '''
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 sh '''
-                    docker build -t $DOCKER_IMAGE:$TIMESTAMP .
+                    docker build -t $DOCKER_IMAGE:$TIMESTAMP mvn-app/
                     docker tag $DOCKER_IMAGE:$TIMESTAMP $DOCKER_IMAGE:latest
                 '''
             }
