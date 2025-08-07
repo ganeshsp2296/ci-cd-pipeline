@@ -30,21 +30,27 @@ pipeline {
 
         stage('Build Artifact') {
             steps {
-                sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
+                dir('mvn-app') {
+                    sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
+                }
             }
         }
 
         stage('SonarQube Scan') {
             steps {
-                withSonarQubeEnv('sonarqube') {
-                    sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner -Dproject.settings=sonar-project.properties"
+                dir('mvn-app') {
+                    withSonarQubeEnv('sonarqube') {
+                        sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner -Dproject.settings=sonar-project.properties"
+                    }
                 }
             }
         }
 
         stage('Upload Artifact to Nexus') {
             steps {
-                sh "${MAVEN_HOME}/bin/mvn deploy"
+                dir('mvn-app') {
+                    sh "${MAVEN_HOME}/bin/mvn deploy"
+                }
             }
         }
 
