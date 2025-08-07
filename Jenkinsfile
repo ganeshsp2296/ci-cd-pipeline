@@ -1,56 +1,51 @@
 pipeline {
     agent any
 
+    tools {
+        maven 'maven' // Jenkins-managed Maven (configured in Global Tool Configuration)
+    }
+
     environment {
-        MVN_HOME = tool name: 'maven3'
+        scannerHome = tool name: 'sonar-scanner' // Jenkins-managed SonarQube Scanner
         NEXUS_CRED = credentials('nexus-cred')
-        DOCKER_IMAGE = "localhost:30800/docker-hosted-repo/ci-cd-app"
+        DOCKER_IMAGE = "nexus.yourdomain.com/docker-hosted-repo/your-app"
         TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/ganeshsp2296/ci-cd-pipeline.git', branch: 'ganesh.developer', credentialsId: 'Github-token'
+                git branch: 'ganesh.developer', url: 'https://github.com/ganeshsp2296/ci-cd-pipeline.git'
             }
         }
 
-        stage('Copy settings.xml') {
+        stage('Setup Maven Settings') {
             steps {
                 sh '''
                     mkdir -p /var/lib/jenkins/.m2
                     cp mvn-app/settings.xml /var/lib/jenkins/.m2/settings.xml
-                    chown jenkins:jenkins /var/lib/jenkins/.m2/settings.xml
+                    chown -R jenkins:jenkins /var/lib/jenkins/.m2
                 '''
-            }
-        }
-
-        stage('Compile Code') {
-            steps {
-                sh "${MVN_HOME}/bin/mvn clean compile"
             }
         }
 
         stage('SonarQube Scan') {
             steps {
-                script {
-                    def scannerHome = tool 'sonar-scanner'
-                    withSonarQubeEnv('SonarQube') {
-                        sh "${scannerHome}/bin/sonar-scanner"
-                    }
+                withSonarQubeEnv('sonarqube') {
+                    sh "${scannerHome}/bin/sonar-scanner"
                 }
             }
         }
 
         stage('Build Artifact') {
             steps {
-                sh "${MVN_HOME}/bin/mvn package -DskipTests"
+                sh 'mvn clean package -DskipTests'
             }
         }
 
         stage('Upload Artifact to Nexus') {
             steps {
-                sh "${MVN_HOME}/bin/mvn deploy"
+                sh 'mvn deploy'
             }
         }
 
@@ -67,7 +62,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     sh '''
-                        echo "$PASSWORD" | docker login localhost:30800 -u "$USERNAME" --password-stdin
+                        echo "$PASSWORD" | docker login nexus.yourdomain.com -u "$USERNAME" --password-stdin
                         docker push $DOCKER_IMAGE:$TIMESTAMP
                         docker push $DOCKER_IMAGE:latest
                     '''
