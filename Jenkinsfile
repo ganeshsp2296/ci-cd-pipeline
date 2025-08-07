@@ -5,7 +5,7 @@ pipeline {
         MAVEN_HOME = tool 'maven'
         SONAR_SCANNER_HOME = tool 'sonar-scanner'
         NEXUS_CRED = credentials('nexus-cred')
-        DOCKER_IMAGE = "localhost:30800/docker-hosted-repo/ci-cd-app"
+        DOCKER_IMAGE = "172.31.10.224:30800/docker-hosted-repo/ci-cd-app"
         TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
     }
 
@@ -67,7 +67,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     sh '''
-                        echo "$PASSWORD" | docker login localhost:30800 -u "$USERNAME" --password-stdin
+                        echo "$PASSWORD" | docker login 172.31.10.224:30800 -u "$USERNAME" --password-stdin
                         docker push $DOCKER_IMAGE:$TIMESTAMP
                         docker push $DOCKER_IMAGE:latest
                     '''
