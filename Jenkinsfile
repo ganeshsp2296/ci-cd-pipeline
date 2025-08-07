@@ -28,7 +28,7 @@ pipeline {
 
         stage('SonarQube Scan') {
             steps {
-                withSonarQubeEnv('SonarQube') {
+                withSonarQubeEnv('sonarqube') {
                     sh '''
                         cd mvn-app
                         ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
