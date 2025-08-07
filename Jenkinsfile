@@ -2,17 +2,18 @@ pipeline {
     agent any
 
     environment {
-        MAVEN_HOME = tool 'maven'
-        SONAR_SCANNER_HOME = tool 'sonar-scanner'
-        NEXUS_CRED = credentials('nexus-cred')
-        DOCKER_IMAGE = "localhost:30800/docker-hosted-repo/ci-cd-app"
-        TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
+        MAVEN_HOME = tool name: 'maven'
+        SONAR_SCANNER_HOME = tool name: 'sonar-scanner'
+    }
+
+    tools {
+        maven 'maven'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/ganeshsp2296/ci-cd-pipeline.git', branch: 'ganesh.developer', credentialsId: 'Github-token'
+                git credentialsId: 'Github-token', url: 'https://github.com/ganeshsp2296/ci-cd-pipeline.git', branch: 'ganesh.developer'
             }
         }
 
@@ -26,56 +27,61 @@ pipeline {
             }
         }
 
+        stage('Build with Maven') {
+            steps {
+                dir('mvn-app') {
+                    sh "${MAVEN_HOME}/bin/mvn clean install"
+                }
+            }
+        }
+
         stage('SonarQube Scan') {
             steps {
                 withSonarQubeEnv('sonarqube') {
-                    sh '''
-                        cd mvn-app
-                        ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
+                    dir('mvn-app') {
+                        sh '''
+                            ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
                             -Dsonar.projectKey=ci-cd-app \
                             -Dsonar.projectName=ci-cd-app \
                             -Dsonar.sources=. \
                             -Dsonar.java.binaries=target \
                             -Dsonar.host.url=http://172.31.10.224:30900
-                    '''
+                        '''
+                    }
                 }
-            }
-        }
-
-        stage('Build Artifact') {
-            steps {
-                sh '''
-                    cd mvn-app
-                    ${MAVEN_HOME}/bin/mvn clean package -DskipTests
-                '''
             }
         }
 
         stage('Upload Artifact to Nexus') {
             steps {
-                sh '''
-                    cd mvn-app
-                    ${MAVEN_HOME}/bin/mvn deploy
-                '''
+                withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                    dir('mvn-app') {
+                        sh '''
+                            ${MAVEN_HOME}/bin/mvn deploy \
+                            -DskipTests \
+                            -Dnexus.username=$NEXUS_USER \
+                            -Dnexus.password=$NEXUS_PASS
+                        '''
+                    }
+                }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                    docker build -t $DOCKER_IMAGE:$TIMESTAMP mvn-app/
-                    docker tag $DOCKER_IMAGE:$TIMESTAMP $DOCKER_IMAGE:latest
-                '''
+                dir('mvn-app') {
+                    sh 'docker build -t ci-cd-app:latest .'
+                }
             }
         }
 
         stage('Push Docker Image to Nexus') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                withCredentials([usernamePassword(credentialsId: 'NEXUS_CRED', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                     sh '''
-                        echo "$PASSWORD" | docker login localhost:30800 -u "$USERNAME" --password-stdin
-                        docker push $DOCKER_IMAGE:$TIMESTAMP
-                        docker push $DOCKER_IMAGE:latest
+                        echo $NEXUS_PASS | docker login -u $NEXUS_USER --password-stdin <your-nexus-host>:<port>
+                        docker tag ci-cd-app:latest 172.31.10.224:30800/ci-cd-app:latest
+                        docker push 172.31.10.224:30800/ci-cd-app:latest
                     '''
                 }
             }
