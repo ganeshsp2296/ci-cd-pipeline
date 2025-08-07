@@ -25,6 +25,12 @@ pipeline {
             }
         }
 
+        stage('Compile Code') {
+            steps {
+                sh "${MVN_HOME}/bin/mvn clean compile"
+            }
+        }
+
         stage('SonarQube Scan') {
             steps {
                 script {
@@ -38,7 +44,7 @@ pipeline {
 
         stage('Build Artifact') {
             steps {
-                sh "${MVN_HOME}/bin/mvn clean package -DskipTests"
+                sh "${MVN_HOME}/bin/mvn package -DskipTests"
             }
         }
 
@@ -76,4 +82,3 @@ pipeline {
         }
     }
 }
-
