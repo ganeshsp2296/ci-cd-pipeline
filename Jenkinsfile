@@ -2,18 +2,16 @@ pipeline {
     agent any
 
     environment {
-        MAVEN_HOME = tool name: 'maven'
-        SONAR_SCANNER_HOME = tool name: 'sonar-scanner'
-    }
-
-    tools {
-        maven 'maven'
+        MAVEN_HOME = tool 'maven'
+        SONAR_SCANNER_HOME = tool 'sonar-scanner'
+        DOCKER_IMAGE = "65.2.74.48:30800/docker-hosted-repo/ci-cd-app"  // Replace with your Nexus public IP
+        TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git credentialsId: 'Github-token', url: 'https://github.com/ganeshsp2296/ci-cd-pipeline.git', branch: 'ganesh.developer'
+                git url: 'https://github.com/ganeshsp2296/ci-cd-pipeline.git', branch: 'ganesh.developer', credentialsId: 'Github-token'
             }
         }
 
@@ -22,66 +20,47 @@ pipeline {
                 sh '''
                     mkdir -p /var/lib/jenkins/.m2
                     cp mvn-app/settings.xml /var/lib/jenkins/.m2/settings.xml
-                    chown -R jenkins:jenkins /var/lib/jenkins/.m2
+                    chown jenkins:jenkins /var/lib/jenkins/.m2/settings.xml
                 '''
-            }
-        }
-
-        stage('Build with Maven') {
-            steps {
-                dir('mvn-app') {
-                    sh "${MAVEN_HOME}/bin/mvn clean install"
-                }
             }
         }
 
         stage('SonarQube Scan') {
             steps {
                 withSonarQubeEnv('sonarqube') {
-                    dir('mvn-app') {
-                        sh '''
-                            ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
-                            -Dsonar.projectKey=ci-cd-app \
-                            -Dsonar.projectName=ci-cd-app \
-                            -Dsonar.sources=. \
-                            -Dsonar.java.binaries=target \
-                            -Dsonar.host.url=http://172.31.10.224:30900
-                        '''
-                    }
+                    sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner -Dproject.settings=sonar-project.properties"
                 }
+            }
+        }
+
+        stage('Build Artifact') {
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
             }
         }
 
         stage('Upload Artifact to Nexus') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
-                    dir('mvn-app') {
-                        sh '''
-                            ${MAVEN_HOME}/bin/mvn deploy \
-                            -DskipTests \
-                            -Dnexus.username=$NEXUS_USER \
-                            -Dnexus.password=$NEXUS_PASS
-                        '''
-                    }
-                }
+                sh "${MAVEN_HOME}/bin/mvn deploy"
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                dir('mvn-app') {
-                    sh 'docker build -t ci-cd-app:latest .'
-                }
+                sh '''
+                    docker build -t $DOCKER_IMAGE:$TIMESTAMP .
+                    docker tag $DOCKER_IMAGE:$TIMESTAMP $DOCKER_IMAGE:latest
+                '''
             }
         }
 
         stage('Push Docker Image to Nexus') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'NEXUS_CRED', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     sh '''
-                        echo $NEXUS_PASS | docker login -u $NEXUS_USER --password-stdin <your-nexus-host>:<port>
-                        docker tag ci-cd-app:latest 172.31.10.224:30800/ci-cd-app:latest
-                        docker push 172.31.10.224:30800/ci-cd-app:latest
+                        echo "$PASSWORD" | docker login 65.2.74.48:30800 -u "$USERNAME" --password-stdin
+                        docker push $DOCKER_IMAGE:$TIMESTAMP
+                        docker push $DOCKER_IMAGE:latest
                     '''
                 }
             }
