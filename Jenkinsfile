@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     environment {
+        MVN_HOME = tool name: 'maven3'
         NEXUS_CRED = credentials('nexus-cred')
         DOCKER_IMAGE = "localhost:30800/docker-hosted-repo/ci-cd-app"
         TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
@@ -37,19 +38,13 @@ pipeline {
 
         stage('Build Artifact') {
             steps {
-                script {
-                    def mvnHome = tool 'maven3'
-                    sh "${mvnHome}/bin/mvn clean package -DskipTests"
-                }
+                sh "${MVN_HOME}/bin/mvn clean package -DskipTests"
             }
         }
 
         stage('Upload Artifact to Nexus') {
             steps {
-                script {
-                    def mvnHome = tool 'maven3'
-                    sh "${mvnHome}/bin/mvn deploy"
-                }
+                sh "${MVN_HOME}/bin/mvn deploy"
             }
         }
 
