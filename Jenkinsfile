@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        SONAR_SCANNER_HOME = tool name: 'SonarQube Scanner'
-        MVN_HOME = tool name: 'Maven'
+        SONAR_SCANNER_HOME = tool name: 'sonar-scanner'
+        MVN_HOME = tool name: 'maven3'
         NEXUS_CRED = credentials('nexus-cred')
         DOCKER_IMAGE = "nexus.yourdomain.com/docker-hosted-repo/your-app"
         TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
