@@ -1,4 +1,3 @@
 FROM openjdk:17
-COPY target/*.jar app.jar
+COPY mvn-app/target/*.jar app.jar
 ENTRYPOINT ["java", "-jar", "/app.jar"]
-
