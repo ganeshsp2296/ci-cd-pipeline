@@ -5,14 +5,14 @@ pipeline {
         SONAR_SCANNER_HOME = tool name: 'sonar-scanner'
         MVN_HOME = tool name: 'maven3'
         NEXUS_CRED = credentials('nexus-cred')
-        DOCKER_IMAGE = "nexus.yourdomain.com/docker-hosted-repo/your-app"
+        DOCKER_IMAGE = "localhost:30800/docker-hosted-repo/ci-cd-app"
         TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'ganesh.developer', url: 'https://github.com/ganeshsp2296/your-repo.git'
+                git url: 'https://github.com/ganeshsp2296/ci-cd-pipeline.git', branch: 'ganesh.developer', credentialsId: 'Github-token'
             }
         }
 
@@ -59,7 +59,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     sh '''
-                        echo "$PASSWORD" | docker login nexus.yourdomain.com -u "$USERNAME" --password-stdin
+                        echo "$PASSWORD" | docker login localhost:30800 -u "$USERNAME" --password-stdin
                         docker push $DOCKER_IMAGE:$TIMESTAMP
                         docker push $DOCKER_IMAGE:latest
                     '''
