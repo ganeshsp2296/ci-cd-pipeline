@@ -7,5 +7,15 @@
     <artifactId>ganesh-app</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
-</project>
 
+    <distributionManagement>
+        <repository>
+            <id>nexus</id>
+            <url>http://172.31.10.224:30800/repository/maven-releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>nexus</id>
+            <url>http://172.31.10.224:30800/repository/maven-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+</project>
