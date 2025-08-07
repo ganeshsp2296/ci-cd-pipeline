@@ -1,60 +1,76 @@
 pipeline {
     agent any
+
     environment {
-        SONAR_URL = 'http://sonarqube.default.svc.cluster.local:9000'
-        SONAR_TOKEN = credentials('sonar-token')
-        NEXUS_URL = 'http://nexus.default.svc.cluster.local:8081'
-        IMAGE_NAME = "ganesh-app"
+        SONAR_SCANNER_HOME = tool name: 'SonarQube Scanner'
+        MVN_HOME = tool name: 'Maven'
+        NEXUS_CRED = credentials('nexus-cred')
+        DOCKER_IMAGE = "nexus.yourdomain.com/docker-hosted-repo/your-app"
+        TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
     }
+
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'ganesh.developer', url: 'https://github.com/ganeshsp2296/ci-cd-pipeline.git'
+                git branch: 'ganesh.developer', url: 'https://github.com/ganeshsp2296/your-repo.git'
             }
         }
+
+        stage('Copy settings.xml') {
+            steps {
+                sh '''
+                    mkdir -p /var/lib/jenkins/.m2
+                    cp settings.xml /var/lib/jenkins/.m2/settings.xml
+                    chown jenkins:jenkins /var/lib/jenkins/.m2/settings.xml
+                '''
+            }
+        }
+
         stage('SonarQube Scan') {
             steps {
-                withSonarQubeEnv('MySonarQube') {
-                    sh 'mvn clean verify sonar:sonar'
+                withSonarQubeEnv('SonarQube') {
+                    sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner"
                 }
             }
         }
+
         stage('Build Artifact') {
             steps {
-                script {
-                    env.BUILD_ID = sh(script: "date +%Y%m%d%H%M%S", returnStdout: true).trim()
-                }
-                sh "mvn package"
-                sh "cp target/*.jar target/app-${BUILD_ID}.jar"
+                sh "${MVN_HOME}/bin/mvn clean package -DskipTests"
             }
         }
+
         stage('Upload Artifact to Nexus') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'nexus-creds', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                sh "${MVN_HOME}/bin/mvn deploy"
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                    docker build -t $DOCKER_IMAGE:$TIMESTAMP .
+                    docker tag $DOCKER_IMAGE:$TIMESTAMP $DOCKER_IMAGE:latest
+                '''
+            }
+        }
+
+        stage('Push Docker Image to Nexus') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     sh '''
-                    curl -v -u $NEXUS_USER:$NEXUS_PASS --upload-file target/app-${BUILD_ID}.jar \
-                    ${NEXUS_URL}/repository/maven-releases/com/example/ganesh-app/${BUILD_ID}/ganesh-app-${BUILD_ID}.jar
+                        echo "$PASSWORD" | docker login nexus.yourdomain.com -u "$USERNAME" --password-stdin
+                        docker push $DOCKER_IMAGE:$TIMESTAMP
+                        docker push $DOCKER_IMAGE:latest
                     '''
                 }
             }
         }
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    dockerImage = docker.build("${IMAGE_NAME}:${BUILD_ID}")
-                }
-            }
-        }
-        stage('Push Docker Image to Nexus') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'nexus-creds', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
-                    script {
-                        sh "docker tag ${IMAGE_NAME}:${BUILD_ID} nexus.default.svc.cluster.local:8082/${IMAGE_NAME}:${BUILD_ID}"
-                        sh "docker login nexus.default.svc.cluster.local:8082 -u $NEXUS_USER -p $NEXUS_PASS"
-                        sh "docker push nexus.default.svc.cluster.local:8082/${IMAGE_NAME}:${BUILD_ID}"
-                    }
-                }
-            }
+    }
+
+    post {
+        always {
+            cleanWs()
         }
     }
 }
