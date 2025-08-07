@@ -20,7 +20,7 @@ pipeline {
             steps {
                 sh '''
                     mkdir -p /var/lib/jenkins/.m2
-                    cp settings.xml /var/lib/jenkins/.m2/settings.xml
+                    cp mvn-app/settings.xml /var/lib/jenkins/.m2/settings.xml
                     chown jenkins:jenkins /var/lib/jenkins/.m2/settings.xml
                 '''
             }
