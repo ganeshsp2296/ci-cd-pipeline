@@ -2,8 +2,6 @@ pipeline {
     agent any
 
     environment {
-        SONAR_SCANNER_HOME = tool name: 'sonar-scanner'
-        MVN_HOME = tool name: 'maven3'
         NEXUS_CRED = credentials('nexus-cred')
         DOCKER_IMAGE = "localhost:30800/docker-hosted-repo/ci-cd-app"
         TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
@@ -28,21 +26,30 @@ pipeline {
 
         stage('SonarQube Scan') {
             steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner"
+                script {
+                    def scannerHome = tool 'sonar-scanner'
+                    withSonarQubeEnv('SonarQube') {
+                        sh "${scannerHome}/bin/sonar-scanner"
+                    }
                 }
             }
         }
 
         stage('Build Artifact') {
             steps {
-                sh "${MVN_HOME}/bin/mvn clean package -DskipTests"
+                script {
+                    def mvnHome = tool 'maven3'
+                    sh "${mvnHome}/bin/mvn clean package -DskipTests"
+                }
             }
         }
 
         stage('Upload Artifact to Nexus') {
             steps {
-                sh "${MVN_HOME}/bin/mvn deploy"
+                script {
+                    def mvnHome = tool 'maven3'
+                    sh "${mvnHome}/bin/mvn deploy"
+                }
             }
         }
 
