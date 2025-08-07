@@ -56,12 +56,10 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                dir('mvn-app') {
-                    sh '''
-                        docker build -t $DOCKER_IMAGE:$TIMESTAMP .
-                        docker tag $DOCKER_IMAGE:$TIMESTAMP $DOCKER_IMAGE:latest
-                    '''
-                }
+                sh '''
+                    docker build -t $DOCKER_IMAGE:$TIMESTAMP .
+                    docker tag $DOCKER_IMAGE:$TIMESTAMP $DOCKER_IMAGE:latest
+                '''
             }
         }
 
