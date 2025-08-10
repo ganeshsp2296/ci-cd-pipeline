@@ -5,9 +5,6 @@ pipeline {
         MAVEN_HOME = tool 'maven'
         SONAR_SCANNER_HOME = tool 'sonar-scanner'
         NEXUS_CRED = credentials('nexus-cred')
-        // Get current Nexus EC2 public IP dynamically
-        NEXUS_IP = sh(script: "curl -s http://169.254.169.254/latest/meta-data/public-ipv4", returnStdout: true).trim()
-        DOCKER_IMAGE = "${NEXUS_IP}:30800/docker-hosted-repo/ci-cd-app"
         TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
     }
 
@@ -58,23 +55,33 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                    docker build -t $DOCKER_IMAGE:$TIMESTAMP .
-                    docker tag $DOCKER_IMAGE:$TIMESTAMP $DOCKER_IMAGE:latest
-                '''
+                script {
+                    // Get the current Nexus public IP
+                    def nexusIp = sh(script: "curl -s http://169.254.169.254/latest/meta-data/public-ipv4", returnStdout: true).trim()
+                    def dockerImage = "${nexusIp}:30800/docker-hosted-repo/ci-cd-app"
+
+                    sh """
+                        docker build -t ${dockerImage}:${TIMESTAMP} .
+                        docker tag ${dockerImage}:${TIMESTAMP} ${dockerImage}:latest
+                    """
+
+                    // Save for later stages
+                    env.DOCKER_IMAGE = dockerImage
+                }
             }
         }
 
         stage('Push Docker Image to Nexus') {
             steps {
                 script {
-                    // Refresh NEXUS_IP in case instance IP changed mid-pipeline
-                    NEXUS_IP = sh(script: "curl -s http://169.254.169.254/latest/meta-data/public-ipv4", returnStdout: true).trim()
+                    def nexusIp = sh(script: "curl -s http://169.254.169.254/latest/meta-data/public-ipv4", returnStdout: true).trim()
+                    env.DOCKER_IMAGE = "${nexusIp}:30800/docker-hosted-repo/ci-cd-app"
+
                     withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                         sh """
-                            echo "$PASSWORD" | docker login http://$NEXUS_IP:30800 -u "$USERNAME" --password-stdin
-                            docker push ${NEXUS_IP}:30800/docker-hosted-repo/ci-cd-app:$TIMESTAMP
-                            docker push ${NEXUS_IP}:30800/docker-hosted-repo/ci-cd-app:latest
+                            echo "$PASSWORD" | docker login http://$nexusIp:30800 -u "$USERNAME" --password-stdin
+                            docker push ${DOCKER_IMAGE}:${TIMESTAMP}
+                            docker push ${DOCKER_IMAGE}:latest
                         """
                     }
                 }
