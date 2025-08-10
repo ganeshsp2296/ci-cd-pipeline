@@ -4,7 +4,7 @@
           http://maven.apache.org/xsd/settings-1.0.0.xsd">
   <servers>
     <server>
-      <id>nexus</id>
+      <id>nexus-releases</id> <!-- Must match <repository> id in pom.xml -->
       <username>admin</username>
       <password>admin123</password>
     </server>
@@ -13,7 +13,7 @@
     <mirror>
       <id>nexus</id>
       <mirrorOf>*</mirrorOf>
-      <url>http://65.2.74.48:30800/repository/maven-hosted-releases/</url>
+      <url>http://172.31.10.224:30800/repository/maven-hosted-releases/</url> <!-- Use private IP -->
     </mirror>
   </mirrors>
 </settings>
