@@ -1,10 +1,15 @@
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
-          http://maven.apache.org/xsd/settings-1.0.0.xsd">
+                              http://maven.apache.org/xsd/settings-1.0.0.xsd">
   <servers>
     <server>
-      <id>nexus-releases</id> <!-- Must match <repository> id in pom.xml -->
+      <id>nexus-releases</id>
+      <username>admin</username>
+      <password>admin123</password>
+    </server>
+    <server>
+      <id>nexus-snapshots</id>
       <username>admin</username>
       <password>admin123</password>
     </server>
@@ -13,7 +18,7 @@
     <mirror>
       <id>nexus</id>
       <mirrorOf>*</mirrorOf>
-      <url>http://172.31.10.224:30800/repository/maven-hosted-releases/</url> <!-- Use private IP -->
+      <url>http://172.31.10.224:30800/repository/maven-public/</url> <!-- Use repository group if available -->
     </mirror>
   </mirrors>
 </settings>
