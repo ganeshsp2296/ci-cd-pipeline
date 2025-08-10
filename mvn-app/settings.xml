@@ -25,13 +25,13 @@
             <repositories>
                 <repository>
                     <id>nexus-releases</id>
-                    <url>${env.NEXUS_URL}/repository/maven-releases/</url>
+                    <url>__NEXUS_URL__/repository/maven-releases/</url>
                     <releases><enabled>true</enabled></releases>
                     <snapshots><enabled>false</enabled></snapshots>
                 </repository>
                 <repository>
                     <id>nexus-snapshots</id>
-                    <url>${env.NEXUS_URL}/repository/maven-snapshots/</url>
+                    <url>__NEXUS_URL__/repository/maven-snapshots/</url>
                     <releases><enabled>false</enabled></releases>
                     <snapshots><enabled>true</enabled></snapshots>
                 </repository>
