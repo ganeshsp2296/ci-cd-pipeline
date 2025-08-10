@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         MVN_HOME = tool name: 'maven'
+        SONAR_SCANNER_HOME = tool name: 'sonar-scanner'
         NEXUS_CRED = credentials('nexus-cred')
         DOCKER_IMAGE = "localhost:30800/docker-hosted-repo/ci-cd-app"
         TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
@@ -11,7 +12,9 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/ganeshsp2296/ci-cd-pipeline.git', branch: 'ganesh.developer', credentialsId: 'Github-token'
+                git branch: 'ganesh.developer',
+                    url: 'https://github.com/ganeshsp2296/ci-cd-pipeline.git',
+                    credentialsId: 'Github-token'
             }
         }
 
@@ -25,47 +28,53 @@ pipeline {
             }
         }
 
+        stage('Build for Sonar') {
+            steps {
+                sh "${MVN_HOME}/bin/mvn clean compile"
+            }
+        }
+
         stage('SonarQube Scan') {
             steps {
-                script {
-                    def scannerHome = tool 'sonar-scanner'
-                    withSonarQubeEnv('sonarqube') {
-                        sh "${scannerHome}/bin/sonar-scanner"
-                    }
+                withSonarQubeEnv('sonarqube') {
+                    sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner"
                 }
             }
         }
 
         stage('Build Artifact') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
             steps {
-                sh "${MVN_HOME}/bin/mvn clean package -DskipTests"
+                sh "${MVN_HOME}/bin/mvn clean package"
             }
         }
 
         stage('Upload Artifact to Nexus') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
             steps {
                 sh "${MVN_HOME}/bin/mvn deploy"
             }
         }
 
         stage('Build Docker Image') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
             steps {
-                sh '''
-                    docker build -t $DOCKER_IMAGE:$TIMESTAMP .
-                    docker tag $DOCKER_IMAGE:$TIMESTAMP $DOCKER_IMAGE:latest
-                '''
+                sh "docker build -t ${DOCKER_IMAGE}:${TIMESTAMP} ."
             }
         }
 
         stage('Push Docker Image to Nexus') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
             steps {
-                withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                    sh '''
-                        echo "$PASSWORD" | docker login localhost:30800 -u "$USERNAME" --password-stdin
-                        docker push $DOCKER_IMAGE:$TIMESTAMP
-                        docker push $DOCKER_IMAGE:latest
-                    '''
-                }
+                sh "docker push ${DOCKER_IMAGE}:${TIMESTAMP}"
             }
         }
     }
