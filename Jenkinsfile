@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         MVN_HOME = tool name: 'maven'
-        SONAR_SCANNER_HOME = tool name: 'sonar-scanner'
         NEXUS_CRED = credentials('nexus-cred')
         DOCKER_IMAGE = "localhost:30800/docker-hosted-repo/ci-cd-app"
         TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
@@ -12,9 +11,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/ganeshsp2296/ci-cd-pipeline.git',
-                    branch: 'ganesh.developer',
-                    credentialsId: 'Github-token'
+                git url: 'https://github.com/ganeshsp2296/ci-cd-pipeline.git', branch: 'ganesh.developer', credentialsId: 'Github-token'
             }
         }
 
@@ -30,8 +27,11 @@ pipeline {
 
         stage('SonarQube Scan') {
             steps {
-                withSonarQubeEnv('sonarqube') {
-                    sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner"
+                script {
+                    def scannerHome = tool 'sonar-scanner'
+                    withSonarQubeEnv('sonarqube') {
+                        sh "${scannerHome}/bin/sonar-scanner"
+                    }
                 }
             }
         }
