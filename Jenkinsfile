@@ -9,6 +9,19 @@ pipeline {
     }
 
     stages {
+        stage('Get Public IP') {
+            steps {
+                script {
+                    PUBLIC_IP = sh(script: "curl -s http://checkip.amazonaws.com", returnStdout: true).trim()
+                    NEXUS_URL = "http://${PUBLIC_IP}:8081"
+                    DOCKER_REGISTRY = "${PUBLIC_IP}:30800"
+                    echo "Public IP: ${PUBLIC_IP}"
+                    echo "Nexus URL: ${NEXUS_URL}"
+                    echo "Docker Registry: ${DOCKER_REGISTRY}"
+                }
+            }
+        }
+
         stage('Checkout') {
             steps {
                 git url: 'https://github.com/ganeshsp2296/ci-cd-pipeline.git',
@@ -30,7 +43,7 @@ pipeline {
         stage('Build Artifact') {
             steps {
                 dir('mvn-app') {
-                    sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
+                    sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests -DNEXUS_URL=${NEXUS_URL}"
                 }
             }
         }
@@ -47,8 +60,15 @@ pipeline {
 
         stage('Upload Artifact to Nexus') {
             steps {
-                dir('mvn-app') {
-                    sh "${MAVEN_HOME}/bin/mvn deploy"
+                withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
+                    dir('mvn-app') {
+                        sh """
+                            ${MAVEN_HOME}/bin/mvn deploy \
+                            -DNEXUS_URL=${NEXUS_URL} \
+                            -DNEXUS_USERNAME=${NEXUS_USERNAME} \
+                            -DNEXUS_PASSWORD=${NEXUS_PASSWORD}
+                        """
+                    }
                 }
             }
         }
@@ -56,34 +76,23 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Get the current Nexus public IP
-                    def nexusIp = sh(script: "curl -s http://169.254.169.254/latest/meta-data/public-ipv4", returnStdout: true).trim()
-                    def dockerImage = "${nexusIp}:30800/docker-hosted-repo/ci-cd-app"
-
+                    DOCKER_IMAGE = "${DOCKER_REGISTRY}/docker-hosted-repo/ci-cd-app"
                     sh """
-                        docker build -t ${dockerImage}:${TIMESTAMP} .
-                        docker tag ${dockerImage}:${TIMESTAMP} ${dockerImage}:latest
+                        docker build -t ${DOCKER_IMAGE}:${TIMESTAMP} .
+                        docker tag ${DOCKER_IMAGE}:${TIMESTAMP} ${DOCKER_IMAGE}:latest
                     """
-
-                    // Save for later stages
-                    env.DOCKER_IMAGE = dockerImage
                 }
             }
         }
 
         stage('Push Docker Image to Nexus') {
             steps {
-                script {
-                    def nexusIp = sh(script: "curl -s http://169.254.169.254/latest/meta-data/public-ipv4", returnStdout: true).trim()
-                    env.DOCKER_IMAGE = "${nexusIp}:30800/docker-hosted-repo/ci-cd-app"
-
-                    withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                        sh """
-                            echo "$PASSWORD" | docker login http://$nexusIp:30800 -u "$USERNAME" --password-stdin
-                            docker push ${DOCKER_IMAGE}:${TIMESTAMP}
-                            docker push ${DOCKER_IMAGE}:latest
-                        """
-                    }
+                withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    sh """
+                        echo "$PASSWORD" | docker login http://${DOCKER_REGISTRY} -u "$USERNAME" --password-stdin
+                        docker push ${DOCKER_REGISTRY}/docker-hosted-repo/ci-cd-app:${TIMESTAMP}
+                        docker push ${DOCKER_REGISTRY}/docker-hosted-repo/ci-cd-app:latest
+                    """
                 }
             }
         }
