@@ -2,79 +2,81 @@ pipeline {
     agent any
 
     environment {
-        MVN_HOME = tool name: 'maven'
-        SONAR_SCANNER_HOME = tool name: 'sonar-scanner'
-        NEXUS_CRED = credentials('nexus-cred')
-        DOCKER_IMAGE = "localhost:30800/docker-hosted-repo/ci-cd-app"
+        MAVEN_HOME = tool 'maven'                   // your configured Maven tool name in Jenkins
+        SONAR_SCANNER_HOME = tool 'sonar-scanner'  // your configured Sonar Scanner tool name
+        NEXUS_CRED = credentials('nexus-cred')     // your Nexus credentials ID in Jenkins
+        DOCKER_IMAGE = "172.31.10.224:30800/docker-hosted-repo/ci-cd-app"
         TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout SCM') {
             steps {
-                git branch: 'ganesh.developer',
-                    url: 'https://github.com/ganeshsp2296/ci-cd-pipeline.git',
-                    credentialsId: 'Github-token'
+                checkout scm
             }
         }
 
         stage('Copy settings.xml') {
             steps {
                 sh '''
-                    mkdir -p /var/lib/jenkins/.m2
-                    cp mvn-app/settings.xml /var/lib/jenkins/.m2/settings.xml
-                    chown jenkins:jenkins /var/lib/jenkins/.m2/settings.xml
+                    mkdir -p ~/.m2
+                    cp mvn-app/settings.xml ~/.m2/settings.xml
                 '''
             }
         }
 
         stage('Build for Sonar') {
             steps {
-                sh "${MVN_HOME}/bin/mvn clean compile"
+                dir('mvn-app') {
+                    sh "${MAVEN_HOME}/bin/mvn clean compile"
+                }
             }
         }
 
         stage('SonarQube Scan') {
             steps {
-                withSonarQubeEnv('sonarqube') {
-                    sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner"
+                dir('mvn-app') {
+                    withSonarQubeEnv('sonarqube') {
+                        sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner -Dproject.settings=sonar-project.properties"
+                    }
                 }
             }
         }
 
         stage('Build Artifact') {
-            when {
-                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
-            }
             steps {
-                sh "${MVN_HOME}/bin/mvn clean package"
+                dir('mvn-app') {
+                    sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
+                }
             }
         }
 
         stage('Upload Artifact to Nexus') {
-            when {
-                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
-            }
             steps {
-                sh "${MVN_HOME}/bin/mvn deploy"
+                dir('mvn-app') {
+                    sh "${MAVEN_HOME}/bin/mvn deploy"
+                }
             }
         }
 
         stage('Build Docker Image') {
-            when {
-                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
-            }
             steps {
-                sh "docker build -t ${DOCKER_IMAGE}:${TIMESTAMP} ."
+                sh """
+                    docker build -t ${DOCKER_IMAGE}:${TIMESTAMP} .
+                    docker tag ${DOCKER_IMAGE}:${TIMESTAMP} ${DOCKER_IMAGE}:latest
+                """
             }
         }
 
         stage('Push Docker Image to Nexus') {
-            when {
-                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
-            }
             steps {
-                sh "docker push ${DOCKER_IMAGE}:${TIMESTAMP}"
+                withCredentials([usernamePassword(credentialsId: 'nexus-cred', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
+                    sh """
+                        echo $PASSWORD | docker login 172.31.10.224:30800 -u $USERNAME --password-stdin
+                        docker push ${DOCKER_IMAGE}:${TIMESTAMP}
+                        docker push ${DOCKER_IMAGE}:latest
+                    """
+                }
             }
         }
     }
