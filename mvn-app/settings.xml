@@ -1,42 +1,34 @@
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
-                              https://maven.apache.org/xsd/settings-1.0.0.xsd">
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
+                              http://maven.apache.org/xsd/settings-1.0.0.xsd">
 
+  <!-- Nexus Credentials -->
   <servers>
     <server>
-      <id>nexus-snapshots</id>
-      <username>__NEXUS_USERNAME__</username>
-      <password>__NEXUS_PASSWORD__</password>
-    </server>
-    <server>
-      <id>nexus-releases</id>
-      <username>__NEXUS_USERNAME__</username>
-      <password>__NEXUS_PASSWORD__</password>
+      <id>nexus</id>
+      <username>admin</username>
+      <password>admin123</password>
     </server>
   </servers>
 
+  <!-- Nexus Repository Mirror -->
   <mirrors>
     <mirror>
       <id>nexus</id>
       <mirrorOf>*</mirrorOf>
-      <url>__NEXUS_URL__/repository/maven-public/</url>
+      <url>http://65.2.74.48:30800/repository/maven-hosted-releases/</url>
     </mirror>
   </mirrors>
 
+  <!-- Default Maven Profile -->
   <profiles>
     <profile>
       <id>nexus</id>
       <repositories>
         <repository>
           <id>central</id>
-          <url>https://repo.maven.apache.org/maven2</url>
-          <releases><enabled>true</enabled></releases>
-          <snapshots><enabled>true</enabled></snapshots>
-        </repository>
-        <repository>
-          <id>nexus</id>
-          <url>__NEXUS_URL__/repository/maven-central/</url>
+          <url>http://65.2.74.48:30800/repository/maven-central/</url>
           <releases><enabled>true</enabled></releases>
           <snapshots><enabled>true</enabled></snapshots>
         </repository>
@@ -44,13 +36,7 @@
       <pluginRepositories>
         <pluginRepository>
           <id>central</id>
-          <url>https://repo.maven.apache.org/maven2</url>
-          <releases><enabled>true</enabled></releases>
-          <snapshots><enabled>true</enabled></snapshots>
-        </pluginRepository>
-        <pluginRepository>
-          <id>nexus</id>
-          <url>__NEXUS_URL__/repository/maven-central/</url>
+          <url>http://65.2.74.48:30800/repository/maven-central/</url>
           <releases><enabled>true</enabled></releases>
           <snapshots><enabled>true</enabled></snapshots>
         </pluginRepository>
