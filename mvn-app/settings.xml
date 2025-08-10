@@ -30,31 +30,29 @@
       <repositories>
         <repository>
           <id>central</id>
-          <url>__NEXUS_URL__/repository/maven-central/</url>
+          <url>https://repo.maven.apache.org/maven2</url>
           <releases><enabled>true</enabled></releases>
           <snapshots><enabled>true</enabled></snapshots>
         </repository>
-        <!-- Fallback to Maven Central if Nexus is down -->
         <repository>
-          <id>central-fallback</id>
-          <url>https://repo.maven.apache.org/maven2/</url>
+          <id>nexus</id>
+          <url>__NEXUS_URL__/repository/maven-central/</url>
           <releases><enabled>true</enabled></releases>
-          <snapshots><enabled>false</enabled></snapshots>
+          <snapshots><enabled>true</enabled></snapshots>
         </repository>
       </repositories>
       <pluginRepositories>
         <pluginRepository>
           <id>central</id>
-          <url>__NEXUS_URL__/repository/maven-central/</url>
+          <url>https://repo.maven.apache.org/maven2</url>
           <releases><enabled>true</enabled></releases>
           <snapshots><enabled>true</enabled></snapshots>
         </pluginRepository>
-        <!-- Plugin fallback -->
         <pluginRepository>
-          <id>central-fallback</id>
-          <url>https://repo.maven.apache.org/maven2/</url>
+          <id>nexus</id>
+          <url>__NEXUS_URL__/repository/maven-central/</url>
           <releases><enabled>true</enabled></releases>
-          <snapshots><enabled>false</enabled></snapshots>
+          <snapshots><enabled>true</enabled></snapshots>
         </pluginRepository>
       </pluginRepositories>
     </profile>
