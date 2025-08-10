@@ -2,24 +2,14 @@ pipeline {
     agent any
 
     environment {
-        MAVEN_HOME = tool 'maven'
-        SONAR_SCANNER_HOME = tool 'sonar-scanner'
+        MVN_HOME = tool name: 'maven'
+        SONAR_SCANNER_HOME = tool name: 'sonar-scanner'
         NEXUS_CRED = credentials('nexus-cred')
+        DOCKER_IMAGE = "localhost:30800/docker-hosted-repo/ci-cd-app"
         TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
-        DOCKER_IMAGE_NAME = "ci-cd-app"
     }
 
     stages {
-        stage('Fetch Public IP') {
-            steps {
-                script {
-                    PUBLIC_IP = sh(script: "curl -s ifconfig.me", returnStdout: true).trim()
-                    echo "Public IP: ${PUBLIC_IP}"
-                    DOCKER_REGISTRY = "${PUBLIC_IP}:30800/docker-hosted-repo"
-                }
-            }
-        }
-
         stage('Checkout') {
             steps {
                 git url: 'https://github.com/ganeshsp2296/ci-cd-pipeline.git',
@@ -38,71 +28,49 @@ pipeline {
             }
         }
 
-        stage('Build Artifact') {
+        stage('SonarQube Scan') {
             steps {
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    dir('mvn-app') {
-                        sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
-                    }
+                withSonarQubeEnv('sonarqube') {
+                    sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner"
                 }
             }
         }
 
-        stage('SonarQube Scan') {
+        stage('Build Artifact') {
             steps {
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    dir('mvn-app') {
-                        withSonarQubeEnv('sonarqube') {
-                            sh """
-                                ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
-                                -Dsonar.projectKey=ci-cd-app \
-                                -Dsonar.host.url=http://${PUBLIC_IP}:9000 \
-                                -Dsonar.login=sonarqube-token \
-                                -Dproject.settings=sonar-project.properties
-                            """
-                        }
-                    }
-                }
+                sh "${MVN_HOME}/bin/mvn clean package -DskipTests"
             }
         }
 
         stage('Upload Artifact to Nexus') {
-            when {
-                expression { currentBuild.currentResult == 'SUCCESS' }
-            }
             steps {
-                dir('mvn-app') {
-                    sh "${MAVEN_HOME}/bin/mvn deploy"
-                }
+                sh "${MVN_HOME}/bin/mvn deploy"
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh """
-                    docker build -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${TIMESTAMP} .
-                    docker tag ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${TIMESTAMP} ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:latest
-                """
+                sh '''
+                    docker build -t $DOCKER_IMAGE:$TIMESTAMP .
+                    docker tag $DOCKER_IMAGE:$TIMESTAMP $DOCKER_IMAGE:latest
+                '''
             }
         }
 
         stage('Push Docker Image to Nexus') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                    sh """
-                        echo "$PASSWORD" | docker login http://${PUBLIC_IP}:30800 -u "$USERNAME" --password-stdin
-                        docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${TIMESTAMP}
-                        docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:latest
-                    """
+                    sh '''
+                        echo "$PASSWORD" | docker login localhost:30800 -u "$USERNAME" --password-stdin
+                        docker push $DOCKER_IMAGE:$TIMESTAMP
+                        docker push $DOCKER_IMAGE:latest
+                    '''
                 }
             }
         }
     }
 
     post {
-        success {
-            archiveArtifacts artifacts: 'mvn-app/target/*.jar', fingerprint: true
-        }
         always {
             cleanWs()
         }
