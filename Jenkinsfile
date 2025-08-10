@@ -31,17 +31,17 @@ pipeline {
             }
         }
 
-        stage('Copy settings.xml') {
+        stage('Copy and Update settings.xml') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
-                    sh """
+                    sh '''
                         mkdir -p /var/lib/jenkins/.m2
-                        sed -e 's|__NEXUS_URL__|${NEXUS_URL}|g' \
-                            -e 's|__NEXUS_USERNAME__|${NEXUS_USERNAME}|g' \
-                            -e 's|__NEXUS_PASSWORD__|${NEXUS_PASSWORD}|g' \
-                            mvn-app/settings.xml > /var/lib/jenkins/.m2/settings.xml
+                        cp mvn-app/settings.xml /var/lib/jenkins/.m2/settings.xml
+                        sed -i "s#__NEXUS_URL__#${NEXUS_URL}#g" /var/lib/jenkins/.m2/settings.xml
+                        sed -i "s#__NEXUS_USERNAME__#${NEXUS_USERNAME}#g" /var/lib/jenkins/.m2/settings.xml
+                        sed -i "s#__NEXUS_PASSWORD__#${NEXUS_PASSWORD}#g" /var/lib/jenkins/.m2/settings.xml
                         chown jenkins:jenkins /var/lib/jenkins/.m2/settings.xml
-                    """
+                    '''
                 }
             }
         }
