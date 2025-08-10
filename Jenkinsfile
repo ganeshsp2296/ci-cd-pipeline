@@ -4,7 +4,6 @@ pipeline {
     environment {
         MAVEN_HOME = tool 'maven'
         SONAR_SCANNER_HOME = tool 'sonar-scanner'
-        NEXUS_CRED = credentials('nexus-cred')
         TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
     }
 
@@ -12,12 +11,14 @@ pipeline {
         stage('Get Public IP') {
             steps {
                 script {
-                    PUBLIC_IP = sh(script: "curl -s http://checkip.amazonaws.com", returnStdout: true).trim()
-                    NEXUS_URL = "http://${PUBLIC_IP}:8081"
-                    DOCKER_REGISTRY = "${PUBLIC_IP}:30800"
-                    echo "Public IP: ${PUBLIC_IP}"
-                    echo "Nexus URL: ${NEXUS_URL}"
-                    echo "Docker Registry: ${DOCKER_REGISTRY}"
+                    env.PUBLIC_IP = sh(script: "curl -s http://checkip.amazonaws.com", returnStdout: true).trim()
+                    env.NEXUS_URL = "http://${env.PUBLIC_IP}:8081"
+                    env.DOCKER_REGISTRY = "${env.PUBLIC_IP}:30800"
+                    env.SONAR_URL = "http://${env.PUBLIC_IP}:9000"
+                    echo "Public IP: ${env.PUBLIC_IP}"
+                    echo "Nexus URL: ${env.NEXUS_URL}"
+                    echo "Docker Registry: ${env.DOCKER_REGISTRY}"
+                    echo "SonarQube URL: ${env.SONAR_URL}"
                 }
             }
         }
@@ -32,41 +33,44 @@ pipeline {
 
         stage('Copy settings.xml') {
             steps {
-                sh '''
-                    mkdir -p /var/lib/jenkins/.m2
-                    cp mvn-app/settings.xml /var/lib/jenkins/.m2/settings.xml
-                    chown jenkins:jenkins /var/lib/jenkins/.m2/settings.xml
-                '''
+                withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
+                    sh """
+                        mkdir -p /var/lib/jenkins/.m2
+                        sed -e 's|__NEXUS_URL__|${NEXUS_URL}|g' \
+                            -e 's|__NEXUS_USERNAME__|${NEXUS_USERNAME}|g' \
+                            -e 's|__NEXUS_PASSWORD__|${NEXUS_PASSWORD}|g' \
+                            mvn-app/settings.xml > /var/lib/jenkins/.m2/settings.xml
+                        chown jenkins:jenkins /var/lib/jenkins/.m2/settings.xml
+                    """
+                }
             }
         }
 
         stage('Build Artifact') {
             steps {
-                dir('mvn-app') {
-                    sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests -DNEXUS_URL=${NEXUS_URL}"
+                withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
+                    dir('mvn-app') {
+                        sh """
+                            ${MAVEN_HOME}/bin/mvn clean package deploy \
+                                -DskipTests \
+                                -DNEXUS_URL=${env.NEXUS_URL} \
+                                -DNEXUS_USERNAME=${NEXUS_USERNAME} \
+                                -DNEXUS_PASSWORD=${NEXUS_PASSWORD}
+                        """
+                    }
                 }
             }
         }
 
         stage('SonarQube Scan') {
             steps {
-                dir('mvn-app') {
-                    withSonarQubeEnv('sonarqube') {
-                        sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner -Dproject.settings=sonar-project.properties"
-                    }
-                }
-            }
-        }
-
-        stage('Upload Artifact to Nexus') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
+                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                     dir('mvn-app') {
                         sh """
-                            ${MAVEN_HOME}/bin/mvn deploy \
-                            -DNEXUS_URL=${NEXUS_URL} \
-                            -DNEXUS_USERNAME=${NEXUS_USERNAME} \
-                            -DNEXUS_PASSWORD=${NEXUS_PASSWORD}
+                            ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
+                                -Dsonar.projectBaseDir=. \
+                                -Dsonar.host.url=${env.SONAR_URL} \
+                                -Dsonar.login=${SONAR_TOKEN}
                         """
                     }
                 }
@@ -76,7 +80,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    DOCKER_IMAGE = "${DOCKER_REGISTRY}/docker-hosted-repo/ci-cd-app"
+                    env.DOCKER_IMAGE = "${DOCKER_REGISTRY}/docker-hosted-repo/ci-cd-app"
                     sh """
                         docker build -t ${DOCKER_IMAGE}:${TIMESTAMP} .
                         docker tag ${DOCKER_IMAGE}:${TIMESTAMP} ${DOCKER_IMAGE}:latest
@@ -89,9 +93,9 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     sh """
-                        echo "$PASSWORD" | docker login http://${DOCKER_REGISTRY} -u "$USERNAME" --password-stdin
-                        docker push ${DOCKER_REGISTRY}/docker-hosted-repo/ci-cd-app:${TIMESTAMP}
-                        docker push ${DOCKER_REGISTRY}/docker-hosted-repo/ci-cd-app:latest
+                        echo "$PASSWORD" | docker login ${DOCKER_REGISTRY} -u "$USERNAME" --password-stdin
+                        docker push ${DOCKER_IMAGE}:${TIMESTAMP}
+                        docker push ${DOCKER_IMAGE}:latest
                     """
                 }
             }
