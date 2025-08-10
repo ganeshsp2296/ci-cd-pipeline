@@ -2,26 +2,16 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>ganesh-app</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
 
-  <groupId>com.example</groupId>
-  <artifactId>ganesh-app</artifactId>
-  <version>1.0-SNAPSHOT</version>
-  <packaging>jar</packaging>
-
-  <name>ganesh-app</name>
-  <description>Sample Jenkins CI/CD Maven app</description>
-
-  <distributionManagement>
-    <repository>
-      <id>nexus-releases</id>
-      <url>http://172.31.10.224:30800/repository/maven-releases/</url>
-    </repository>
-    <snapshotRepository>
-      <id>nexus-snapshots</id>
-      <url>http://172.31.10.224:30800/repository/maven-snapshots/</url>
-    </snapshotRepository>
-  </distributionManagement>
-
+    <distributionManagement>
+      <repository>
+        <id>nexus-releases</id> <!-- Same as server id in settings.xml -->
+        <url>http://172.31.10.224:30800/repository/maven-releases/</url>
+      </repository>
+    </distributionManagement>
 </project>
-
