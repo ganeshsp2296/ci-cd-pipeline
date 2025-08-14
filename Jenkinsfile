@@ -72,7 +72,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus-cred', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
                     sh """
-                        echo $PASSWORD | docker login http://65.2.74.48:30800 -u $USERNAME --password-stdin
+                        echo $PASSWORD | docker login http://172.31.10.224:30800 -u $USERNAME --password-stdin
                         docker push ${DOCKER_IMAGE}:${TIMESTAMP}
                         docker push ${DOCKER_IMAGE}:latest
                     """
