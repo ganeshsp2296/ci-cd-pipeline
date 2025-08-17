@@ -37,13 +37,7 @@ pipeline {
             steps {
                 dir('mvn-app') {
                     withSonarQubeEnv('sonarqube') {
-                        withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                            sh """
-                                ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
-                                -Dproject.settings=sonar-project.properties \
-                                -Dsonar.login=$SONAR_TOKEN
-                            """
-                        }
+                        sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner -Dproject.settings=sonar-project.properties"
                     }
                 }
             }
