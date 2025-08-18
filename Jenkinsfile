@@ -37,7 +37,11 @@ pipeline {
             steps {
                 dir('mvn-app') {
                     withSonarQubeEnv('sonarqube') {
-                        sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner -Dproject.settings=sonar-project.properties"
+                        sh """
+                          ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
+                            -Dproject.settings=sonar-project.properties \
+                            -Dsonar.projectVersion=${BUILD_NUMBER}
+                        """
                     }
                 }
             }
