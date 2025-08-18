@@ -14,9 +14,11 @@ spec:
       labels:
         app: myapp
     spec:
+      imagePullSecrets:
+        - name: nexus-secret   # <-- use your secret here
       containers:
         - name: myapp
-          image: 172.31.10.224:30800/docker-hosted-repo/ci-cd-app:latest   # replace with your actual image name
+          image: 172.31.10.224:30800/docker-hosted-repo/ci-cd-app:latest
           ports:
             - containerPort: 8090
 ---
@@ -31,7 +33,7 @@ spec:
   selector:
     app: myapp
   ports:
-    - port: 8090         # Service port
-      targetPort: 8090   # Container port
-      nodePort: 30090    # Fixed NodePort (external access)
+    - port: 8090
+      targetPort: 8090
+      nodePort: 30090
 
