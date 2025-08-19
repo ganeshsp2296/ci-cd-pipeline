@@ -40,11 +40,12 @@ spec:
   selector:
     app: nexus
   ports:
-    - port: 8081
+    - name: http-web
+      port: 8081
       targetPort: 8081
       nodePort: 30800
-    - port: 5000
+    - name: docker-registry
+      port: 5000
       targetPort: 5000
       nodePort: 30500
-
 
