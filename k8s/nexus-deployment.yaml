@@ -19,6 +19,7 @@ spec:
           image: sonatype/nexus3:latest
           ports:
             - containerPort: 8081
+            - containerPort: 5000
           resources:
             limits:
               memory: "3Gi"
@@ -42,4 +43,8 @@ spec:
     - port: 8081
       targetPort: 8081
       nodePort: 30800
+    - port: 5000
+      targetPort: 5000
+      nodePort: 30500
+
 
