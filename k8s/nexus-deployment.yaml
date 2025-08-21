@@ -19,7 +19,6 @@ spec:
           image: sonatype/nexus3:latest
           ports:
             - containerPort: 8081
-            - containerPort: 5000
           resources:
             limits:
               memory: "3Gi"
@@ -45,7 +44,7 @@ spec:
       targetPort: 8081
       nodePort: 30800
     - name: docker-registry
-      port: 5000
-      targetPort: 5000
-      nodePort: 30500
+      port: 5003
+      targetPort: 5003
+      nodePort: 31503
 
