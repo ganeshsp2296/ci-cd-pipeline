@@ -5,8 +5,8 @@ pipeline {
         MAVEN_HOME = tool 'maven'                   // your configured Maven tool name in Jenkins
         SONAR_SCANNER_HOME = tool 'sonar-scanner'  // your configured Sonar Scanner tool name
         NEXUS_CRED = credentials('nexus-cred')     // your Nexus credentials ID in Jenkins
-        DOCKER_IMAGE = "ci-cd/myapp"
-        TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
+        DOCKER_IMAGE = "13.203.159.236:31503/docker-hosted-repo/myapp"
+        // TIMESTAMP = new Date().format("yyyyMMdd-HHmm", TimeZone.getTimeZone('IST'))
     }
 
     stages {
@@ -75,7 +75,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus-cred', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
                     sh """
-                        docker tag ci-cd/myapp:${BUILD_NUMBER} ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                        docker tag 13.203.159.236:31503/docker-hosted-repo/myapp:${BUILD_NUMBER} ${DOCKER_IMAGE}:${BUILD_NUMBER}
                         docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
                     """
                 }
