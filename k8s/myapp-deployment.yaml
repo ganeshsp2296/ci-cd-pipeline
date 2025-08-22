@@ -5,7 +5,7 @@ metadata:
   labels:
     app: myapp
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: myapp
@@ -18,7 +18,8 @@ spec:
         - name: nexus-secret   # <-- use your secret here
       containers:
         - name: myapp
-          image: 13.203.159.236:31503/docker-hosted-repo/myapp:101
+          image: 13.203.159.236:31503/docker-hosted-repo/myapp:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8090
 ---
