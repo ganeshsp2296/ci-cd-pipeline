@@ -18,7 +18,7 @@ spec:
         - name: nexus-secret   # <-- use your secret here
       containers:
         - name: myapp
-          image: 13.203.159.236:31503/docker-hosted-repo/myapp:latest
+          image: 13.203.159.236:31503/docker-hosted-repo/myapp:101
           ports:
             - containerPort: 8090
 ---
