@@ -1,8 +1,8 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" 
+<project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
-                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
-
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.example</groupId>
@@ -11,9 +11,9 @@
     <packaging>jar</packaging>
 
     <name>ganesh-app</name>
-    <description>Sample Spring Boot Application for CI/CD pipeline</description>
+    <description>Spring Boot Application</description>
 
-    <!-- Parent POM provides Spring Boot versions -->
+    <!-- Spring Boot parent -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -28,13 +28,13 @@
     </properties>
 
     <dependencies>
-        <!-- Spring Boot Starter -->
+        <!-- Spring Boot Web Starter -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
+            <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Spring Boot Test -->
+        <!-- Spring Boot Test Starter -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -44,25 +44,37 @@
 
     <build>
         <plugins>
-            <!-- Spring Boot Maven Plugin -->
+            <!-- Maven Compiler Plugin -->
             <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
             </plugin>
         </plugins>
     </build>
 
-    <!-- Nexus Deployment -->
+    <repositories>
+        <!-- Nexus public repository -->
+        <repository>
+            <id>nexus</id>
+            <url>http://172.31.10.224:30800/repository/maven-public/</url>
+        </repository>
+    </repositories>
+
     <distributionManagement>
         <repository>
             <id>nexus-releases</id>
-            <name>Nexus Releases</name>
-            <url>http://13.203.159.236:30800/repository/maven-releases/</url>
+            <name>Nexus Release Repository</name>
+            <url>http://172.31.10.224:30800/repository/maven-releases/</url>
         </repository>
         <snapshotRepository>
             <id>nexus-snapshots</id>
-            <name>Nexus Snapshots</name>
-            <url>http://13.203.159.236:30800/repository/maven-snapshots/</url>
+            <name>Nexus Snapshot Repository</name>
+            <url>http://172.31.10.224:30800/repository/maven-snapshots/</url>
         </snapshotRepository>
     </distributionManagement>
 
