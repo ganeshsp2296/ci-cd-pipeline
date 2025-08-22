@@ -13,9 +13,16 @@
     <name>ganesh-app</name>
     <description>Sample Spring Boot Application for CI/CD pipeline</description>
 
+    <!-- Parent POM provides Spring Boot versions -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.5</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+
     <properties>
         <java.version>17</java.version>
-        <spring.boot.version>3.2.5</spring.boot.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
     </properties>
@@ -27,7 +34,7 @@
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
 
-        <!-- Optional: For testing -->
+        <!-- Spring Boot Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -41,24 +48,6 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>${spring.boot.version}</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- Compiler Plugin -->
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
-                <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
-                </configuration>
             </plugin>
         </plugins>
     </build>
@@ -68,12 +57,12 @@
         <repository>
             <id>nexus-releases</id>
             <name>Nexus Releases</name>
-            <url>http://13.203.159.236:31503/repository/maven-releases/</url>
+            <url>http://13.203.159.236:30800/repository/maven-releases/</url>
         </repository>
         <snapshotRepository>
             <id>nexus-snapshots</id>
             <name>Nexus Snapshots</name>
-            <url>http://13.203.159.236:31503/repository/maven-snapshots/</url>
+            <url>http://13.203.159.236:30800/repository/maven-snapshots/</url>
         </snapshotRepository>
     </distributionManagement>
 
