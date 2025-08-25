@@ -3,8 +3,8 @@ kind: DaemonSet
 metadata:
   name: node-exporter
   namespace: monitoring
-labels:
-  app: node-exporter
+  labels:
+    app: node-exporter
 spec:
   selector:
     matchLabels:
